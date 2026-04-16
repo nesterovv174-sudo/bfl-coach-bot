@@ -66,19 +66,18 @@ async def handle_message(message: types.Message):
     elif text == "🔙 Назад в главное меню":
         await message.answer("Главное меню:", reply_markup=main_menu)
     else:
-        # Любое другое сообщение — отправляем в GigaChat
         await handle_gigachat(message)
 
 async def handle_gigachat(message: types.Message):
     if not GIGACHAT_AUTH_KEY:
-        await message.answer("❌ Ключ GigaChat не настроен.")
+        await message.answer("❌ Ключ GigaChat не настроен. Проверьте GIGACHAT_AUTH_KEY в Railway.")
         return
 
     user_text = message.text
 
     system_prompt = """
 Ты — экспертный коуч только по банкротству физических лиц в России (ФЗ-127).
-Отвечай исключительно по теме БФЛ: возражения, скрипты, этапы, последствия, документы, анализ.
+Отвечай исключительно по теме БФЛ: возражения, скрипты, этапы, последствия, документы, анализ ситуации.
 Используй эмпатию, профессиональный и мягкий тон.
 Формат ответа:
 1. **Краткий разбор**
@@ -86,7 +85,7 @@ async def handle_gigachat(message: types.Message):
 3. **Рекомендации менеджеру**
 4. **Вероятность закрытия** (в %)
 
-Отвечай только на русском.
+Отвечай только на русском языке.
 """
 
     try:
@@ -102,9 +101,9 @@ async def handle_gigachat(message: types.Message):
             ai_reply = response.choices[0].message.content
             await message.answer(ai_reply, parse_mode="Markdown")
     except Exception as e:
-        await message.answer(f"❌ Ошибка GigaChat:\n{str(e)}")
+        await message.answer(f"❌ Ошибка GigaChat:\n{str(e)[:500]}")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    print("✅ Бот запущен с официальной библиотекой GigaChat")
+    print("✅ Бот запущен с GigaChat (официальная библиотека)")
     asyncio.run(dp.start_polling(bot))

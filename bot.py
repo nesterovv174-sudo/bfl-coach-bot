@@ -1,10 +1,10 @@
 import logging
 import asyncio
 import os
-import aiohttp
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from gigachat import GigaChat
 
 API_TOKEN = os.getenv("API_TOKEN")
 GIGACHAT_AUTH_KEY = os.getenv("GIGACHAT_AUTH_KEY")
@@ -49,7 +49,7 @@ async def start_cmd(message: types.Message):
 
 @dp.message()
 async def handle_message(message: types.Message):
-    text = message.text
+    text = message.text.strip()
 
     if text == "📋 Возражения":
         await message.answer("Выберите возражение клиента:", reply_markup=vozrazheniya_menu)
@@ -62,22 +62,16 @@ async def handle_message(message: types.Message):
         await message.answer("⚡ Отправьте сообщение клиента — я предложу варианты ответа.", reply_markup=main_menu)
         return
     elif text == "👋 Приветствие":
-        await message.answer("👋 Добро пожаловать! Используйте меню.", reply_markup=main_menu)
+        await message.answer("👋 Добро пожаловать!", reply_markup=main_menu)
     elif text == "🔙 Назад в главное меню":
         await message.answer("Главное меню:", reply_markup=main_menu)
-
-    # Скрипт первого разговора
-    elif text == "📞 Скрипт первого разговора":
-        reply = "📞 **Скрипт первого разговора**\n\n(Вставьте сюда ваш полный текст скрипта)"
-        await message.answer(reply, parse_mode="Markdown", reply_markup=skripty_menu)
-
     else:
-        # Всё остальное отправляем в GigaChat
+        # Любое другое сообщение — отправляем в GigaChat
         await handle_gigachat(message)
 
 async def handle_gigachat(message: types.Message):
     if not GIGACHAT_AUTH_KEY:
-        await message.answer("❌ Ключ GigaChat не настроен. Проверьте переменную GIGACHAT_AUTH_KEY в Railway.")
+        await message.answer("❌ Ключ GigaChat не настроен.")
         return
 
     user_text = message.text
@@ -96,31 +90,21 @@ async def handle_gigachat(message: types.Message):
 """
 
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {GIGACHAT_AUTH_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "GigaChat",
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_text}
-                    ],
-                    "temperature": 0.7,
-                    "max_tokens": 1200
-                },
-                ssl=False   # ← Это исправляет SSL-ошибку
-            ) as resp:
-                data = await resp.json()
-                ai_reply = data["choices"][0]["message"]["content"]
-                await message.answer(ai_reply, parse_mode="Markdown")
+        with GigaChat(credentials=GIGACHAT_AUTH_KEY, verify_ssl_certs=False) as client:
+            response = client.chat(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_text}
+                ],
+                temperature=0.7,
+                max_tokens=1500
+            )
+            ai_reply = response.choices[0].message.content
+            await message.answer(ai_reply, parse_mode="Markdown")
     except Exception as e:
         await message.answer(f"❌ Ошибка GigaChat:\n{str(e)}")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    print("✅ Бот запущен с GigaChat (SSL отключён для API)")
+    print("✅ Бот запущен с официальной библиотекой GigaChat")
     asyncio.run(dp.start_polling(bot))

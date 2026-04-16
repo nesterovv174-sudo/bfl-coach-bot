@@ -4,7 +4,9 @@ import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-from gigachat import GigaChat
+
+# Импорт GigaChat через другой способ (более стабильный)
+from gigachat import GigaChat as GigaChatClient
 
 API_TOKEN = os.getenv("API_TOKEN")
 GIGACHAT_AUTH_KEY = os.getenv("GIGACHAT_AUTH_KEY")
@@ -70,14 +72,14 @@ async def handle_message(message: types.Message):
 
 async def handle_gigachat(message: types.Message):
     if not GIGACHAT_AUTH_KEY:
-        await message.answer("❌ Ключ GigaChat не настроен. Проверьте GIGACHAT_AUTH_KEY в Railway.")
+        await message.answer("❌ Ключ GigaChat не настроен. Проверьте переменную GIGACHAT_AUTH_KEY в Railway.")
         return
 
     user_text = message.text
 
     system_prompt = """
 Ты — экспертный коуч только по банкротству физических лиц в России (ФЗ-127).
-Отвечай исключительно по теме БФЛ: возражения, скрипты, этапы, последствия, документы, анализ ситуации.
+Отвечай исключительно по теме БФЛ: возражения клиентов, скрипты продаж, этапы процедуры, последствия, документы, анализ ситуации.
 Используй эмпатию, профессиональный и мягкий тон.
 Формат ответа:
 1. **Краткий разбор**
@@ -89,7 +91,7 @@ async def handle_gigachat(message: types.Message):
 """
 
     try:
-        with GigaChat(credentials=GIGACHAT_AUTH_KEY, verify_ssl_certs=False) as client:
+        with GigaChatClient(credentials=GIGACHAT_AUTH_KEY, verify_ssl_certs=False) as client:
             response = client.chat(
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -101,9 +103,9 @@ async def handle_gigachat(message: types.Message):
             ai_reply = response.choices[0].message.content
             await message.answer(ai_reply, parse_mode="Markdown")
     except Exception as e:
-        await message.answer(f"❌ Ошибка GigaChat:\n{str(e)[:500]}")
+        await message.answer(f"❌ Ошибка GigaChat:\n{str(e)[:600]}")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    print("✅ Бот запущен с GigaChat (официальная библиотека)")
+    print("✅ Бот запущен с GigaChat (исправленный импорт)")
     asyncio.run(dp.start_polling(bot))

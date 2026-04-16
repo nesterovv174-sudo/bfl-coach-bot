@@ -56,7 +56,7 @@ async def handle_message(message: types.Message):
     elif text == "📞 Скрипты":
         await message.answer("Выберите скрипт:", reply_markup=skripty_menu)
     elif text == "🤖 Спросить у ИИ":
-        await message.answer("🤖 Режим анализа ситуации включён.\n\nОпишите ситуацию клиента (доход, долги, имущество и т.д.)", reply_markup=main_menu)
+        await message.answer("🤖 Режим анализа ситуации включён.\n\nОпишите ситуацию клиента (доход, долги, имущество, состав семьи и т.д.)", reply_markup=main_menu)
         return
     elif text == "👋 Приветствие":
         await message.answer("👋 Добро пожаловать! Используйте меню ниже.", reply_markup=main_menu)
@@ -67,17 +67,15 @@ async def handle_message(message: types.Message):
                   "🚫 Не доверяю", "🙈 Стыдно / что скажут", "⏰ Времени нет", "⚖️ Уже в суде"]:
         await handle_template_objection(message, text)
     elif text == "📞 Скрипт первого разговора":
-        # (полный скрипт как раньше — оставил без изменений)
-        reply = "📞 **Скрипт первого разговора**\n\n[твой полный 5-шаговый скрипт здесь — вставь если нужно]"
+        reply = "📞 **Скрипт первого разговора**\n\n[вставь сюда полный текст скрипта, если нужно]"
         await message.answer(reply, parse_mode="Markdown", reply_markup=skripty_menu)
     else:
         await handle_gigachat(message)
 
 async def handle_template_objection(message: types.Message, objection: str):
-    # (шаблоны как раньше — можешь дополнить)
     await message.answer("✅ Ответ на возражение загружен.", reply_markup=vozrazheniya_menu)
 
-# ==================== GIGACHAT — МАКСИМАЛЬНО ЖЁСТКИЙ ПРОМПТ ====================
+# ==================== GIGACHAT — СУПЕР-ЖЁСТКИЙ ПРОМПТ ====================
 async def handle_gigachat(message: types.Message):
     if not GIGACHAT_AUTH_KEY:
         await message.answer("❌ Ключ GigaChat не настроен.")
@@ -94,35 +92,40 @@ async def handle_gigachat(message: types.Message):
     system_prompt = f"""
 Ты — эксперт по банкротству физических лиц в России 2026 года.
 
-**СТРОГОЕ ПРАВИЛО №1 (повторяй это в голове перед каждым ответом):**
-Используй ТОЛЬКО данные из блока ниже. Никогда не бери другие цифры прожиточного минимума.
+**ЖЁСТКОЕ ПРАВИЛО (выполняй всегда, без исключений):**
+Используй ТОЛЬКО цифры из блока ниже. Никогда не бери другие значения прожиточного минимума.
 
-=== ПРАВИЛА ИЗ rules.txt (обязательно использовать эти цифры) ===
+=== ПРАВИЛА ИЗ rules.txt ===
 {rules_content}
 === КОНЕЦ ПРАВИЛ ===
 
-**СТРОГОЕ ПРАВИЛО №2:**
-Все расчёты делай **только в рублях**. Пример правильного расчёта для пенсионера с пенсией 18 000 руб.:
-Доход = 18 000 руб.
-Прожиточный минимум пенсионера = 16 000 руб.
-Конкурсная масса = 18 000 - 16 000 = 2 000 руб. в месяц.
+**Пример правильного расчёта (всегда ориентируйся на него):**
+Доход = 40 000 руб.
+Состав семьи: должник + 2 ребёнка.
+Прожиточный минимум:
+- Должник (работоспособный): 20 000 руб.
+- Каждый ребёнок: 18 000 руб.
+Конкурсная масса = 40 000 - (20 000 + 18 000 + 18 000) = -16 000 руб. (отрицательная — списание возможно).
 
-**Правила ответа (обязательно соблюдай порядок):**
-1. Начинай с **Прямого ответа**: можно ли списать долги или нельзя.
-2. Обязательно делай расчёт конкурсной массы по правилам выше и показывай пример в рублях.
-3. Подробно разбирай защиту имущества и варианты его спасения.
-4. Давай подробный ответ.
-5. В конце — уточняющие вопросы нумерованным списком, если нужно.
+**Порядок ответа (строго соблюдай):**
+1. **Прямой ответ**: можно ли списать долги или нельзя.
+2. **Расчёт конкурсной массы** — только по правилам выше, все суммы в рублях, показывай формулу.
+3. **Подробный разбор защиты имущества** и варианты спасения (автомобиль, жильё, техника и т.д.).
+4. Уточняющие вопросы в конце, если нужно.
 
-Отвечай только по теме банкротства физлиц.
+Отвечай чётко, подробно, только по теме банкротства.
 """
 
     try:
         async with aiohttp.ClientSession() as session:
-            # Получаем токен
             async with session.post(
                 "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
-                headers={"Authorization": f"Basic {GIGACHAT_AUTH_KEY}", "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json", "RqUID": "00000000-0000-0000-0000-000000000000"},
+                headers={
+                    "Authorization": f"Basic {GIGACHAT_AUTH_KEY}",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Accept": "application/json",
+                    "RqUID": "00000000-0000-0000-0000-000000000000"
+                },
                 data="scope=GIGACHAT_API_PERS",
                 ssl=False
             ) as resp:
@@ -133,7 +136,6 @@ async def handle_gigachat(message: types.Message):
                 await message.answer("❌ Не удалось получить токен.")
                 return
 
-            # Запрос к GigaChat
             async with session.post(
                 "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
                 headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
@@ -143,8 +145,8 @@ async def handle_gigachat(message: types.Message):
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_text}
                     ],
-                    "temperature": 0.2,   # максимально низко — почти не фантазирует
-                    "max_tokens": 2200
+                    "temperature": 0.15,   # очень низко — почти не придумывает
+                    "max_tokens": 1000
                 },
                 ssl=False
             ) as resp:
@@ -153,9 +155,9 @@ async def handle_gigachat(message: types.Message):
                 await message.answer(ai_reply, parse_mode="Markdown")
 
     except Exception as e:
-        await message.answer(f"❌ Ошибка:\n{str(e)[:500]}")
+        await message.answer(f"❌ Ошибка GigaChat:\n{str(e)[:600]}")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    print("✅ Бот запущен — максимально жёсткий промпт + принуждение rules.txt")
+    print("✅ Бот запущен — супер-жёсткий промпт с примером расчёта")
     asyncio.run(dp.start_polling(bot))

@@ -45,11 +45,7 @@ skripty_menu = ReplyKeyboardMarkup(
 
 @dp.message(Command("start"))
 async def start_cmd(message: types.Message):
-    await message.answer(
-        "👋 Добро пожаловать в AI-коуч по БФЛ!\n\n"
-        "Выберите нужный раздел ниже:",
-        reply_markup=main_menu
-    )
+    await message.answer("👋 Добро пожаловать в AI-коуч по БФЛ!\n\nВыберите раздел:", reply_markup=main_menu)
 
 @dp.message()
 async def handle_message(message: types.Message):
@@ -60,60 +56,43 @@ async def handle_message(message: types.Message):
     elif text == "📞 Скрипты":
         await message.answer("Выберите скрипт:", reply_markup=skripty_menu)
     elif text == "🤖 Спросить у ИИ":
-        await message.answer(
-            "🤖 Режим GigaChat включён.\n\n"
-            "Задавайте любой вопрос по банкротству физических лиц — я дам подробный разбор и готовые варианты ответа.",
-            reply_markup=main_menu
-        )
+        await message.answer("🤖 Режим GigaChat включён.\n\nЗадавайте любой вопрос по банкротству физических лиц.", reply_markup=main_menu)
         return
     elif text == "⚡ Быстрый ответ":
-        await message.answer(
-            "⚡ Отправьте сообщение клиента — я предложу 2–3 варианта ответа.",
-            reply_markup=main_menu
-        )
+        await message.answer("⚡ Отправьте сообщение клиента — я предложу варианты ответа.", reply_markup=main_menu)
         return
     elif text == "👋 Приветствие":
-        await message.answer("👋 Добро пожаловать! Используйте меню для работы.", reply_markup=main_menu)
+        await message.answer("👋 Добро пожаловать! Используйте меню.", reply_markup=main_menu)
     elif text == "🔙 Назад в главное меню":
         await message.answer("Главное меню:", reply_markup=main_menu)
 
-    # ==================== СКРИПТ ПЕРВОГО РАЗГОВОРА ====================
+    # Скрипт первого разговора
     elif text == "📞 Скрипт первого разговора":
-        reply = (
-            "📞 **Скрипт первого разговора**\n\n"
-            "Добрый день / вечер, {ИМЯ КЛИЕНТА}?\n\n"
-            "— Это [ваше имя], я помощник юриста компании «БанкротствоГрупп». Вы недавно общались с моей коллегой, она передала мне, что у вас сумма кредитов составляет ………… т.р. и вам интересно списание. Всё верно?\n\n"
-            "Пауза.\n\n"
-            "— Отлично! Мы специализируемся на списании долгов и уже многим помогли. Сейчас уточню пару вопросов, это займёт 5 минут. Удобно сейчас?"
-        )
+        reply = "📞 **Скрипт первого разговора**\n\n(Вставьте сюда ваш полный текст скрипта)"
         await message.answer(reply, parse_mode="Markdown", reply_markup=skripty_menu)
 
-    # ==================== ШАБЛОННЫЕ ВОЗРАЖЕНИЯ (улучшенные) ====================
-    elif any(x in text for x in ["Дорого", "Заберут", "Подумать", "Боюсь", "Нет денег", "Коллекторы", "МФЦ", "Пробовал", "Не доверяю", "Стыдно", "Времени", "В суде"]):
-        await message.answer("✅ Шаблонный ответ загружен.\n\n(Пока используем заглушку. После теста GigaChat сделаем все тексты красивыми)", reply_markup=vozrazheniya_menu)
-
     else:
-        # Если сообщение не кнопка — считаем, что это вопрос к ИИ
+        # Всё остальное отправляем в GigaChat
         await handle_gigachat(message)
 
 async def handle_gigachat(message: types.Message):
     if not GIGACHAT_AUTH_KEY:
-        await message.answer("❌ Ключ GigaChat не найден. Проверьте переменную GIGACHAT_AUTH_KEY в Railway.")
+        await message.answer("❌ Ключ GigaChat не настроен. Проверьте переменную GIGACHAT_AUTH_KEY в Railway.")
         return
 
     user_text = message.text
 
     system_prompt = """
-Ты — экспертный AI-коуч для менеджеров по банкротству физических лиц (БФЛ) в России.
-Отвечай только по теме банкротства: возражения клиентов, скрипты продаж, этапы процедуры, последствия, документы, анализ ситуации.
-Используй эмпатию, профессиональный, уверенный и мягкий тон.
-Формат ответа всегда:
-1. **Краткий разбор ситуации**
-2. **2–3 готовых варианта ответа клиенту** (живые, естественные тексты)
-3. **Рекомендации менеджеру** (что сказать дальше, на что обратить внимание)
-4. **Вероятность закрытия** (в процентах)
+Ты — экспертный коуч только по банкротству физических лиц в России (ФЗ-127).
+Отвечай исключительно по теме БФЛ: возражения, скрипты, этапы, последствия, документы, анализ.
+Используй эмпатию, профессиональный и мягкий тон.
+Формат ответа:
+1. **Краткий разбор**
+2. **2–3 готовых варианта ответа клиенту** (живые тексты)
+3. **Рекомендации менеджеру**
+4. **Вероятность закрытия** (в %)
 
-Отвечай только на русском языке. Не отвечай на вопросы вне темы БФЛ.
+Отвечай только на русском.
 """
 
     try:
@@ -132,15 +111,16 @@ async def handle_gigachat(message: types.Message):
                     ],
                     "temperature": 0.7,
                     "max_tokens": 1200
-                }
+                },
+                ssl=False   # ← Это исправляет SSL-ошибку
             ) as resp:
                 data = await resp.json()
                 ai_reply = data["choices"][0]["message"]["content"]
                 await message.answer(ai_reply, parse_mode="Markdown")
     except Exception as e:
-        await message.answer(f"❌ Ошибка соединения с GigaChat:\n{str(e)}\n\nПроверьте ключ в Variables.")
+        await message.answer(f"❌ Ошибка GigaChat:\n{str(e)}")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    print("✅ Бот запущен с GigaChat!")
+    print("✅ Бот запущен с GigaChat (SSL отключён для API)")
     asyncio.run(dp.start_polling(bot))

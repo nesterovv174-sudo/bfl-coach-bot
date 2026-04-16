@@ -62,7 +62,7 @@ async def handle_message(message: types.Message):
     elif text == "🤖 Спросить у ИИ":
         await message.answer(
             "🤖 Режим умного ИИ (GigaChat) включён.\n\n"
-            "Задавайте любой вопрос по ситуации клиента — я дам подробный разбор и рекомендации для тебя как менеджера.",
+            "Задавайте любой вопрос по ситуации клиента — я дам подробный разбор и рекомендации для тебя.",
             reply_markup=main_menu
         )
         return
@@ -73,22 +73,29 @@ async def handle_message(message: types.Message):
     elif text == "🔙 Назад в главное меню":
         await message.answer("Главное меню:", reply_markup=main_menu)
 
-    # ==================== ШАБЛОННЫЕ ВОЗРАЖЕНИЯ (по 2 варианта) ====================
+    # ==================== ШАБЛОННЫЕ ВОЗРАЖЕНИЯ ====================
     elif text in ["💰 Дорого / Цена", "🏠 Заберут квартиру", "🤔 Нужно подумать", "😟 Боюсь последствий",
                   "💸 Нет денег", "📞 Коллекторы звонят", "🆓 Сам через МФЦ", "🔄 Уже пробовал",
                   "🚫 Не доверяю", "🙈 Стыдно / что скажут", "⏰ Времени нет", "⚖️ Уже в суде"]:
         await handle_template_objection(message, text)
 
-    # ==================== СКРИПТ ====================
+    # ==================== СКРИПТ ПЕРВОГО РАЗГОВОРА ====================
     elif text == "📞 Скрипт первого разговора":
-        reply = "📞 **Скрипт первого разговора**\n\n(вставьте сюда ваш полный текст скрипта)"
+        reply = (
+            "📞 **Скрипт первого разговора**\n\n"
+            "Добрый день / вечер, {ИМЯ КЛИЕНТА}?\n\n"
+            "— Это [ваше имя], я помощник юриста компании «БанкротствоГрупп». Вы недавно общались с моей коллегой (Имя сотрудника кол-центра), она передала мне, что у вас сумма кредитов составляет ………… т.р. и вам интересно списание данной суммы. Всё верно?\n\n"
+            "Пауза для ответа.\n\n"
+            "— Отлично! Мы как раз специализируемся на списании всех кредитов и долгов и уже многим нашим гражданам помогли. Сейчас я уточню у вас пару вопросов, это займёт 5 минут. Удобно сейчас?\n\n"
+            "Но перед этим расскажите, из чего эта сумма состоит (банки, МФО, долги по ЖКХ)?"
+        )
         await message.answer(reply, parse_mode="Markdown", reply_markup=skripty_menu)
 
     else:
         # Всё остальное — вопрос к ИИ
         await handle_gigachat(message)
 
-# ==================== ШАБЛОННЫЕ ОТВЕТЫ (по 2 варианта везде) ====================
+# ==================== ШАБЛОННЫЕ ОТВЕТЫ (по 2 варианта) ====================
 async def handle_template_objection(message: types.Message, objection: str):
     templates = {
         "💰 Дорого / Цена": (
@@ -156,7 +163,7 @@ async def handle_template_objection(message: types.Message, objection: str):
     reply = templates.get(objection, "✅ Ответ на возражение загружен.")
     await message.answer(reply, parse_mode="Markdown", reply_markup=vozrazheniya_menu)
 
-# ==================== GIGACHAT (только разбор ситуации) ====================
+# ==================== GIGACHAT (только разбор) ====================
 async def handle_gigachat(message: types.Message):
     if not GIGACHAT_AUTH_KEY:
         await message.answer("❌ Ключ GigaChat не настроен.")
@@ -205,8 +212,8 @@ async def handle_gigachat(message: types.Message):
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_text}
                     ],
-                    "temperature": 0.6,
-                    "max_tokens": 1500
+                    "temperature": 0.5,
+                    "max_tokens": 1100
                 },
                 ssl=False
             ) as resp:
@@ -219,5 +226,5 @@ async def handle_gigachat(message: types.Message):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    print("✅ Бот запущен: без кнопки Быстрый ответ + все возражения по 2 варианта")
+    print("✅ Бот запущен: скрипт первого разговора возвращён")
     asyncio.run(dp.start_polling(bot))

@@ -12,16 +12,17 @@ GIGACHAT_AUTH_KEY = os.getenv("GIGACHAT_AUTH_KEY")
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# ==================== МЕНЮ ====================
+# ==================== ГЛАВНОЕ МЕНЮ ====================
 main_menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📋 Возражения"), KeyboardButton(text="📞 Скрипты")],
-        [KeyboardButton(text="🤖 Спросить у ИИ"), KeyboardButton(text="⚡ Быстрый ответ")],
+        [KeyboardButton(text="🤖 Спросить у ИИ")],
         [KeyboardButton(text="👋 Приветствие")],
     ],
     resize_keyboard=True
 )
 
+# ==================== МЕНЮ ВОЗРАЖЕНИЙ ====================
 vozrazheniya_menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="💰 Дорого / Цена"), KeyboardButton(text="🏠 Заберут квартиру")],
@@ -35,6 +36,7 @@ vozrazheniya_menu = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
+# ==================== МЕНЮ СКРИПТОВ ====================
 skripty_menu = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📞 Скрипт первого разговора")],
@@ -59,36 +61,34 @@ async def handle_message(message: types.Message):
 
     elif text == "🤖 Спросить у ИИ":
         await message.answer(
-            "🤖 Режим умного ИИ включён.\n\n"
-            "Задавайте любой вопрос по ситуации клиента — я дам подробный разбор и рекомендации для тебя.",
+            "🤖 Режим умного ИИ (GigaChat) включён.\n\n"
+            "Задавайте любой вопрос по ситуации клиента — я дам подробный разбор и рекомендации для тебя как менеджера.",
             reply_markup=main_menu
         )
         return
 
-    elif text == "⚡ Быстрый ответ":
-        await message.answer("⚡ Отправьте сообщение клиента — я предложу варианты ответа.", reply_markup=main_menu)
-        return
-
     elif text == "👋 Приветствие":
-        await message.answer("👋 Добро пожаловать!", reply_markup=main_menu)
+        await message.answer("👋 Добро пожаловать! Используйте меню ниже.", reply_markup=main_menu)
 
     elif text == "🔙 Назад в главное меню":
         await message.answer("Главное меню:", reply_markup=main_menu)
 
-    # Шаблонные возражения
+    # ==================== ШАБЛОННЫЕ ВОЗРАЖЕНИЯ (по 2 варианта) ====================
     elif text in ["💰 Дорого / Цена", "🏠 Заберут квартиру", "🤔 Нужно подумать", "😟 Боюсь последствий",
                   "💸 Нет денег", "📞 Коллекторы звонят", "🆓 Сам через МФЦ", "🔄 Уже пробовал",
                   "🚫 Не доверяю", "🙈 Стыдно / что скажут", "⏰ Времени нет", "⚖️ Уже в суде"]:
         await handle_template_objection(message, text)
 
+    # ==================== СКРИПТ ====================
     elif text == "📞 Скрипт первого разговора":
-        reply = "📞 **Скрипт первого разговора**\n\n(вставьте сюда ваш полный текст)"
+        reply = "📞 **Скрипт первого разговора**\n\n(вставьте сюда ваш полный текст скрипта)"
         await message.answer(reply, parse_mode="Markdown", reply_markup=skripty_menu)
 
     else:
+        # Всё остальное — вопрос к ИИ
         await handle_gigachat(message)
 
-# ==================== ШАБЛОННЫЕ ВОЗРАЖЕНИЯ (по 2 варианта везде) ====================
+# ==================== ШАБЛОННЫЕ ОТВЕТЫ (по 2 варианта везде) ====================
 async def handle_template_objection(message: types.Message, objection: str):
     templates = {
         "💰 Дорого / Цена": (
@@ -219,5 +219,5 @@ async def handle_gigachat(message: types.Message):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    print("✅ Бот запущен: все возражения по 2 варианта + чистый GigaChat")
+    print("✅ Бот запущен: без кнопки Быстрый ответ + все возражения по 2 варианта")
     asyncio.run(dp.start_polling(bot))
